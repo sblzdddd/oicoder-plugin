@@ -9,10 +9,11 @@
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.sblzdddd.oicoderplugin.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
+        <toolWindow factoryClass="com.github.sblzdddd.oicoderplugin.toolWindow.OiToolWindowFactory" anchor="right"
+                    id="OICoder" icon="/icons/task@20x20_dark.svg"/>
     </extensions>
 
     <applicationListeners>
-        <listener class="com.github.sblzdddd.oicoderplugin.listeners.MyApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
+        <listener class="com.github.sblzdddd.oicoderplugin.listeners.OiAppActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
     </applicationListeners>
 </idea-plugin>
