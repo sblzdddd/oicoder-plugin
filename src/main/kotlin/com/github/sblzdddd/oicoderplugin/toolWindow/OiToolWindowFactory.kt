@@ -2,14 +2,19 @@ package com.github.sblzdddd.oicoderplugin.toolWindow
 
 import com.github.sblzdddd.oicoderplugin.Constants
 import com.github.sblzdddd.oicoderplugin.services.OiCoderService
+import com.github.sblzdddd.oicoderplugin.services.OiCreateCppFile
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.jcef.JBCefBrowser
+import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefClient
+import com.intellij.ui.jcef.JBCefJSQuery
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
@@ -20,11 +25,13 @@ import javax.swing.JPanel
 import javax.swing.SwingUtilities
 
 
-class OiToolWindowFactory : ToolWindowFactory {
+class OiToolWindowFactory<DataContext> : ToolWindowFactory {
 
     init {
     }
     private var browser: JBCefBrowser? = null
+    private var jsQuery: JBCefJSQuery? = null
+    private val fileAction = OiCreateCppFile();
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val oiViewWindow = OiViewWindow(toolWindow)
@@ -32,7 +39,7 @@ class OiToolWindowFactory : ToolWindowFactory {
         // Create JCEF Browser instance
         browser = JBCefBrowser()
 
-        configureBrowser(browser!!)
+        configureBrowser(browser!!, project)
 
         browser!!.loadURL("http://oi.beecent.cn")
 
@@ -43,11 +50,13 @@ class OiToolWindowFactory : ToolWindowFactory {
         // Create a panel for the buttons with FlowLayout
         val buttonPanel = JPanel(FlowLayout(FlowLayout.CENTER))
         val backButton = JButton("<<")
-        val homeButton = JButton("Reload")
+        val homeButton = JButton("Home")
+        val reloadButton = JButton("reload")
         val devToolsButton = JButton("DevTools")
         val forwButton = JButton(">>")
         buttonPanel.add(backButton)
         buttonPanel.add(homeButton)
+        buttonPanel.add(reloadButton)
         buttonPanel.add(devToolsButton)
         buttonPanel.add(forwButton)
 
@@ -65,7 +74,9 @@ class OiToolWindowFactory : ToolWindowFactory {
         homeButton.addActionListener {
             browser!!.loadURL("http://oi.beecent.cn")
         }
-
+        reloadButton.addActionListener {
+            browser!!.cefBrowser.reload();
+        }
         devToolsButton.addActionListener {
             SwingUtilities.invokeLater {
                 browser!!.openDevtools()
@@ -93,7 +104,7 @@ class OiToolWindowFactory : ToolWindowFactory {
 
     }
 
-    private fun configureBrowser(browser: JBCefBrowser) {
+    private fun configureBrowser(browser: JBCefBrowser, project: Project) {
         thisLogger().info("configure browser")
         val jbCefClient: JBCefClient = browser.jbCefClient
         jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
@@ -119,12 +130,67 @@ class OiToolWindowFactory : ToolWindowFactory {
                     if (url.startsWith(Constants.COURSE_URL)) {
                         frame.executeJavaScript(Constants.COURSE_JS, url, 0);
                     }
+                    disposeJsQuery()
+                    createQuery(browser, project)
 
                     thisLogger().warn("Page $url has loaded with status code: $httpStatusCode")
 
                 }
             }
         }, browser.cefBrowser)
+    }
+    private fun createQuery(browser: JBCefBrowser, project: Project) {
+        jsQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+        jsQuery!!.addHandler { query: String? ->
+            when {
+                query == "getCode" -> {
+                    val code = getCurrentFileContent(project)
+                    browser.cefBrowser.executeJavaScript(
+                        "window.receiveCode(`${code.toJsonString()}`)",
+                        browser.cefBrowser.url, 0
+                    )
+                    JBCefJSQuery.Response("success")
+                }
+
+                query?.startsWith("createCppFile") == true -> {
+                    ApplicationManager.getApplication().invokeLater {
+                        val parts = query.split(":")
+                        var fileName = ""
+                        if (parts.size == 2) {
+                            fileName = parts[1]
+                        }
+                        fileAction.createCppFile0(project, fileName)
+                        JBCefJSQuery.Response("success")
+                    }
+                }
+
+                else -> JBCefJSQuery.Response("unknown query")
+            }
+            null
+        }
+        val getCode = jsQuery!!.inject("'getCode'");
+        val createCppFile = jsQuery!!.inject("'createCppFile:'+fileName")
+        browser.cefBrowser.executeJavaScript(
+            "window.getCode = function() { $getCode };" +
+            "window.createCppFile = function(fileName) { $createCppFile };",
+            browser.cefBrowser.url, 0
+        )
+        thisLogger().warn("Created Query")
+    }
+
+    private fun disposeJsQuery() {
+        jsQuery?.dispose()
+        jsQuery = null
+    }
+
+    private fun getCurrentFileContent(project: Project): String {
+        val editor = FileEditorManager.getInstance(project).selectedTextEditor
+        return editor?.document?.text ?: "No active editor found"
+    }
+
+
+    private fun String.toJsonString(): String {
+        return replace("\"", "\\\"")
     }
     fun getBrowser(): JBCefBrowser? {
         return browser;

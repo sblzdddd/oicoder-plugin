@@ -22,7 +22,7 @@ class OiCoderService(project: Project) {
                 val toolWindow = toolWindowManager.getToolWindow("OICoder")
                 if (toolWindow != null && !toolWindow.isVisible) {
                     // Tool window is closing
-                    val factory = toolWindow.contentManager.factory as? OiToolWindowFactory
+                    val factory = toolWindow.contentManager.factory as? OiToolWindowFactory<Any?>
                     factory?.getBrowser()?.jbCefClient?.dispose()
                     factory?.getBrowser()?.dispose()
                     thisLogger().info("Dispose on window close")

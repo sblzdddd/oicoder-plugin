@@ -1,7 +1,7 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <id>com.github.sblzdddd.oicoderplugin</id>
-    <name>oicoder-plugin</name>
+    <name>Oicoder</name>
     <vendor>sblzdddd</vendor>
 
     <depends>com.intellij.modules.platform</depends>
@@ -14,6 +14,16 @@
     </extensions>
 
     <applicationListeners>
-        <listener class="com.github.sblzdddd.oicoderplugin.listeners.OiAppActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
+        <listener class="com.github.sblzdddd.oicoderplugin.listeners.OiAppActivationListener"
+                  topic="com.intellij.openapi.application.ApplicationActivationListener"/>
     </applicationListeners>
+
+    <actions>
+        <group id="OiCoderGroup" text="OICoder" description="OICoder plugin actions">
+            <action id="CreateCppFileAction" class="com.github.sblzdddd.oicoderplugin.services.OiCreateCppFileAction"
+                    text="Create Answer C++ File" description="Creates a new C++ file">
+                <add-to-group group-id="MainMenu" anchor="last"/>
+            </action>
+        </group>
+    </actions>
 </idea-plugin>

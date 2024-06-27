@@ -102,6 +102,12 @@ class Constants {
             	editor.getModel().onDidChangeContent((event) => {
                     $("textarea.coderunner-answer").val(editor.getValue());
                 });
+                
+                window.receiveCode = (code) => {
+                    console.log('Received code from plugin: \n', code);
+                    editor.getModel().setValue(code);
+                    $("textarea.coderunner-answer").val(editor.getValue());
+                }
             });
             $("div.formulation").append($(`
                 <div style="display:flex; margin-top:15px; gap:10px">
@@ -110,9 +116,26 @@ class Constants {
                 </div>
             `));
             $("button#cl-paste").on("click", function(){
-                
+                handlePasteButtonClick();
             })
-            
+            $("button#cl-create").on("click", function(){
+                handleCreateButtonClick();
+            })
+            function handlePasteButtonClick() {
+                if (window.getCode) {
+                    window.getCode();
+                } else {
+                    console.error('getCode() is not available.');
+                }
+            }
+            function handleCreateButtonClick() {
+                if (window.createCppFile) {
+                    const fileName = $("li.breadcrumb-item").last().find("a").text()
+                    window.createCppFile(fileName);
+                } else {
+                    console.error('createCppFile() is not available.');
+                }
+            }
         """.trimIndent()
 
         val SUBMIT_JS = """
@@ -120,5 +143,17 @@ class Constants {
             $("button:contains('提交所有答案并结束')").click();
             $("input[value='提交所有答案并结束']").click();
         """.trimIndent()
+
+        val CPP_CONTENT = """// Created using OICoder-Plugin
+#include <bits/stdc++.h>
+using namespace std;
+
+#define l long long;
+
+signed main() {
+    return 0;
+}
+
+"""
     }
 }
